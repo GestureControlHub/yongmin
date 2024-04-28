@@ -17,24 +17,46 @@ gesture_folders = {
 
 
 # 각도를 계산하는 함수
+# def calculate_angles(hand_landmarks, image_width, image_height):
+#     joint = np.zeros((21, 3))
+#     for j, lm in enumerate(hand_landmarks.landmark):
+#         joint[j] = [lm.x * image_width, lm.y * image_height, lm.z]
+#
+#     # 벡터 계산
+#     v1 = joint[[0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 0, 13, 14, 15, 0, 17, 18, 19], :]
+#     v2 = joint[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], :]
+#     v = v2 - v1  # 벡터
+#     v = v / np.linalg.norm(v, axis=1)[:, np.newaxis]
+#
+#     # 각도 계산
+#     angle = np.arccos(np.einsum('nt,nt->n',
+#                                 v[[0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16, 17, 18], :],
+#                                 v[[1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15, 17, 18, 19], :]))  # 내적
+#     angle = np.degrees(angle)  # 라디안을 도로 변환
+#
+#     return angle
 def calculate_angles(hand_landmarks, image_width, image_height):
     joint = np.zeros((21, 3))
     for j, lm in enumerate(hand_landmarks.landmark):
         joint[j] = [lm.x * image_width, lm.y * image_height, lm.z]
 
-    # 벡터 계산
-    v1 = joint[[0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 0, 13, 14, 15, 0, 17, 18, 19], :]
-    v2 = joint[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], :]
-    v = v2 - v1  # 벡터
-    v = v / np.linalg.norm(v, axis=1)[:, np.newaxis]
+    # 모든 랜드마크의 평균 좌표를 원점으로 사용
+    origin = np.mean(joint, axis=0)
+
+    # 원점에서 각 랜드마크까지의 벡터 계산
+    vectors = joint - origin
+
+    # L2 거리로 벡터 정규화
+    vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
 
     # 각도 계산
-    angle = np.arccos(np.einsum('nt,nt->n',
-                                v[[0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16, 17, 18], :],
-                                v[[1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15, 17, 18, 19], :]))  # 내적
-    angle = np.degrees(angle)  # 라디안을 도로 변환
+    # 내적을 이용하여 각도 계산
+    angles = np.arccos(np.einsum('nt,nt->n',
+                                vectors[[0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 0, 13, 14, 15, 0, 17, 18, 19], :],
+                                vectors[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], :]))  # 내적
+    angles = np.degrees(angles)  # 라디안을 도로 변환
 
-    return angle
+    return angles
 
 
 # 이미지에서 특징(각도)와 레이블을 추출하는 함수
@@ -70,7 +92,7 @@ knn = KNeighborsClassifier(n_neighbors=3)
 knn.fit(X_train, y_train)
 
 # 실시간 비디오 스트림 처리를 위한 MediaPipe 손 설정
-video = cv2.VideoCapture(0)
+video = cv2.VideoCapture(1)
 with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands:
     while video.isOpened():
         ret, img = video.read()
