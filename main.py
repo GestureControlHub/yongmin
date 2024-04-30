@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 import pyautogui
+import time
+import os
 
 from learn import train_model as tm
 from mouse import HandTracking as htm
@@ -68,7 +70,24 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
                     X_pred = np.array([angles], dtype=np.float32)
                     gesture_id = model.predict(X_pred)[0]
                     gesture_name = [name for name, idx in gesture_folders.items() if idx == gesture_id][0]
-                    print(gesture_name)
+
+                    if gesture_name == "paper":
+                        if os.name == 'posix':
+                            pyautogui.hotkey('command', 'c')
+                        else:
+                            pyautogui.hotkey('ctrl', 'c')
+                        cv2.putText(img, 'copy!', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,cv2.LINE_AA)
+                        time.sleep(1)
+                    elif gesture_name == "rock":
+                        if os.name == 'posix':
+                            pyautogui.hotkey('command', 'v')
+                        else:
+                            pyautogui.hotkey('ctrl', 'v')
+                        cv2.putText(img, 'paste!', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,cv2.LINE_AA)
+                        time.sleep(1)
+                    elif gesture_name == "scissors":
+                        print(gesture_name)
+                        time.sleep(1)
                     # mp_drawing.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
             img = detector.findHands(img)
