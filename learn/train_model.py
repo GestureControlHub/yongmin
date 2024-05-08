@@ -51,8 +51,8 @@ def calculate_angles(hand_landmarks, image_width, image_height):
     # 내적을 이용하여 각도 계산
     angles = np.arccos(np.einsum('nt,nt->n',
                                 vectors[[0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 0, 13, 14, 15, 0, 17, 18, 19], :],
-                                vectors[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], :]))  # 내적
-    angles = np.degrees(angles)  # 라디안을 도로 변환
+                                vectors[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], :]))
+    angles = np.degrees(angles)
 
     return angles
 
