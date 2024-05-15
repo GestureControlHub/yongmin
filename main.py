@@ -1,5 +1,3 @@
-import subprocess
-
 import cv2
 import numpy as np
 import pyautogui
@@ -33,7 +31,7 @@ def set_brightness(brightness_percent):
 # 제스처 탐지 설정
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
-gesture_folders = {'none': 0, 'rock': 1, 'paper': 2, 'scissors': 3}
+gesture_folders = {'none': 0, 'rock': 1, 'paper': 2, 'scissors': 3, 'temp': 4, "duck": 5,'twist': 6, '1k': 7, "2k": 8}
 model = tm.trained_model()
 
 # 마우스 설정
@@ -45,7 +43,7 @@ pTime = 0
 plocX, plocY = 0, 0
 clocX, clocY = 0, 0
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 cap.set(3, wCam)
 cap.set(4, hCam)
 cap.set(cv2.CAP_PROP_FPS, 30)
@@ -120,6 +118,7 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
                             pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'right')
                             cv2.putText(img, 'next desktop', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
                                         cv2.LINE_AA)
+                            print("nnnnn")
                             last_action_time = current_time
 
                         elif gesture_name == "scissors":
@@ -128,6 +127,36 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
                                         cv2.LINE_AA)
                             last_action_time = current_time
 
+                        elif gesture_name == "temp":
+                            # pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'left')
+                            # cv2.putText(img, 'previous desktop', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
+                            #             cv2.LINE_AA)
+                            print("성공!!")
+                            last_action_time = current_time
+                        elif gesture_name == "duck":
+                            # pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'left')
+                            # cv2.putText(img, 'previous desktop', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
+                            #             cv2.LINE_AA)
+                            print("오리꽥꽥!!")
+                            last_action_time = current_time
+                        elif gesture_name == "twist":
+                            # pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'left')
+                            # cv2.putText(img, 'previous desktop', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
+                            #             cv2.LINE_AA)
+                            print("twist!!")
+                            last_action_time = current_time
+                        elif gesture_name == "1k":
+                            # pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'left')
+                            # cv2.putText(img, 'previous desktop', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
+                            #             cv2.LINE_AA)
+                            print("1k!!")
+                            last_action_time = current_time
+                        elif gesture_name == "2k":
+                            # pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'left')
+                            # cv2.putText(img, 'previous desktop', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
+                            #             cv2.LINE_AA)
+                            print("2k!!")
+                            last_action_time = current_time
                     # mp_drawing.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
             img = detector.findHands(img)

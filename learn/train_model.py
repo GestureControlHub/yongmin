@@ -12,7 +12,12 @@ gesture_folders = {
     'none': 0,
     'rock': 1,
     'paper': 2,
-    'scissors': 3
+    'scissors': 3,
+    'temp': 4,
+    'duck': 5,
+    'twist': 6,
+    '1k': 7,
+    "2k": 8
 }
 
 # def calculate_angles(hand_landmarks, image_width, image_height):
@@ -63,8 +68,9 @@ def extract_features_and_labels():
         labels = []
         for gesture_name, label in gesture_folders.items():
             folder_path = os.path.join('rps_data_sample', gesture_name)
+            print(folder_path)
             for img_name in os.listdir(folder_path):
-                if img_name.lower().endswith(('.png', '.jpg', '.jpeg')):
+                if img_name.lower().endswith(('.png', '.jpg', '.jpeg', '.PNG')):
                     img_path = os.path.join(folder_path, img_name)
                     img = cv2.imread(img_path)
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
