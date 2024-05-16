@@ -8,6 +8,7 @@ import math
 from learn import train_model as tm
 from mouse import HandTracking as htm
 import mediapipe as mp
+from sklearn.preprocessing import MinMaxScaler
 
 
 # 볼륨 설정 함수
@@ -43,7 +44,9 @@ pTime = 0
 plocX, plocY = 0, 0
 clocX, clocY = 0, 0
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture(1)
+
 cap.set(3, wCam)
 cap.set(4, hCam)
 cap.set(cv2.CAP_PROP_FPS, 30)
@@ -67,21 +70,43 @@ def calculate_angles(hand_landmarks, image_width, image_height):
 
     # 모든 랜드마크의 평균 좌표를 원점으로 사용
     origin = np.mean(joint, axis=0)
+    angles = np.zeros((21, 1))  # 결과를 저장할 배열 초기화
+    for i in range(21):
+        # joint[i]에서 origin을 빼서 원점을 기준으로 벡터를 재조정
+        vector = joint[i] - origin
+
+        # 벡터와 origin 사이의 각도 계산
+        # 이 예에서 origin은 모든 joint의 평균이므로 (0, 0, 0)이 되어 문제가 발생할 수 있음
+        # origin 대신 각 벡터 자체와 (1,0,0) 같은 기준 벡터 사이의 각도를 계산할 수도 있음
+        norm_vector = np.linalg.norm(vector)
+        norm_origin = np.linalg.norm(origin)
+        if norm_vector == 0 or norm_origin == 0:
+            angle = 0  # 벡터가 0이면 각도는 정의되지 않음
+        else:
+            dot_product = np.dot(vector, origin)
+            angle = np.arccos(dot_product / (norm_vector * norm_origin))
+            angle = np.degrees(angle)  # 라디안을 도로 변환
+        angles[i] = angle
 
     # 원점에서 각 랜드마크까지의 벡터 계산
     vectors = joint - origin
+    scaler = MinMaxScaler()
+    magnitudes = np.linalg.norm(vectors, axis=1)
+    scaled_magnitudes = scaler.fit_transform(magnitudes.reshape(-1, 1))
 
     # L2 거리로 벡터 정규화
-    vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
+    # vectors = vectors / np.linalg.norm(vectors, axis=1)[:, np.newaxis]
 
     # 각도 계산
     # 내적을 이용하여 각도 계산
-    angles = np.arccos(np.einsum('nt,nt->n',
-                                vectors[[0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 0, 13, 14, 15, 0, 17, 18, 19], :],
-                                vectors[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], :]))  # 내적
-    angles = np.degrees(angles)  # 라디안을 도로 변환
+    # angles = np.arccos(np.einsum('nt,nt->n',
+    #                             vectors[[0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 0, 13, 14, 15, 0, 17, 18, 19], :],
+    #                             vectors[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], :]))  # 내적
+    # angles = np.degrees(angles)  # 라디안을 도로 변환
 
-    return angles
+    feature = np.concatenate([angles, scaled_magnitudes]).flatten()
+
+    return feature
 
 with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands:
     while cap.isOpened():
