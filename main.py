@@ -9,8 +9,8 @@ from learn import train_model as tm
 from mouse import HandTracking as htm
 import mediapipe as mp
 from sklearn.preprocessing import MinMaxScaler
-
-
+from pynput.mouse import Controller, Button
+mouse = Controller()
 # 볼륨 설정 함수
 def set_volume(volume_percent):
     os.system(f"osascript -e 'set volume output volume {volume_percent}'")
@@ -32,9 +32,15 @@ def set_brightness(brightness_percent):
 # 제스처 탐지 설정
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
-gesture_folders = {'none': 0, 'rock': 1, 'paper': 2, 'scissors': 3, 'temp': 4, "duck": 5,'twist': 6, '1k': 7, "2k": 8}
-model = tm.trained_model()
-
+gesture_folders = {
+                   'none': 0,
+                   'rock': 1,
+                   'paper': 2,
+                   'scissors': 3
+                   # 'temp': 4, "duck": 5,'twist': 6, '1k': 7, "2k": 8}
+                   }
+# model = tm.trained_model()
+model = tm.train_and_evaluate_model()
 # 마우스 설정
 wCam, hCam = 640, 480
 frameR = 100  # Frame Reduction
@@ -44,8 +50,7 @@ pTime = 0
 plocX, plocY = 0, 0
 clocX, clocY = 0, 0
 
-cap = cv2.VideoCapture(0)
-# cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(1)
 
 cap.set(3, wCam)
 cap.set(4, hCam)
@@ -115,23 +120,24 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
         if success:
             img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             results = hands.process(img_rgb)
-
             if results.multi_hand_landmarks and recognize_mode:
                 for hand_landmarks in results.multi_hand_landmarks:
                     angles = calculate_angles(hand_landmarks, img.shape[1], img.shape[0])
                     X_pred = np.array([angles], dtype=np.float32)
+
                     gesture_id = model.predict(X_pred)[0]
+                    print(gesture_id)
                     gesture_name = [name for name, idx in gesture_folders.items() if idx == gesture_id][0]
 
                     if current_time - last_action_time > action_cooldown:
                         if gesture_name == "paper":
                             # 볼륨 조절 모드 or 디스플레이 밝기 조절 전환
-                            control_mode = not control_mode
-                            if control_mode:
-                                cv2.putText(img, 'sound control', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,cv2.LINE_AA)
-                            else:
-                                cv2.putText(img, 'display brightness control', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                            (255, 255, 255), 2, cv2.LINE_AA)
+                            # control_mode = not control_mode
+                            # if control_mode:
+                            #     cv2.putText(img, 'sound control', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,cv2.LINE_AA)
+                            # else:
+                            #     cv2.putText(img, 'display brightness control', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                            #                 (255, 255, 255), 2, cv2.LINE_AA)
                             last_action_time = current_time  # 마지막 동작 시간 업데이트
 
                             # pyautogui.hotkey('command' if os.name == 'posix' else 'ctrl', 'm')
@@ -140,16 +146,16 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
                             # last_action_time = current_time  # 마지막 동작 시간 업데이트
 
                         elif gesture_name == "rock":
-                            pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'right')
-                            cv2.putText(img, 'next desktop', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
-                                        cv2.LINE_AA)
-                            print("nnnnn")
+                            # pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'right')
+                            # cv2.putText(img, 'next desktop', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
+                            #             cv2.LINE_AA)
+                            # print("rock")
                             last_action_time = current_time
 
                         elif gesture_name == "scissors":
-                            pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'left')
-                            cv2.putText(img, 'previous desktop', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
-                                        cv2.LINE_AA)
+                            # pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'left')
+                            # cv2.putText(img, 'previous desktop', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
+                            #             cv2.LINE_AA)
                             last_action_time = current_time
 
                         elif gesture_name == "temp":
@@ -182,6 +188,7 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
                             #             cv2.LINE_AA)
                             print("2k!!")
                             last_action_time = current_time
+
                     # mp_drawing.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
             img = detector.findHands(img)
@@ -208,8 +215,9 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
                         y3 = np.interp(y1, (frameR, hCam - frameR), (0, hScr))
                         clocX = plocX + (x3 - plocX) / smoothening
                         clocY = plocY + (y3 - plocY) / smoothening
-                        pyautogui.moveTo(wScr - clocX, clocY)
-                        # cv2.circle(img, (x1, y1), 15, (255, 0, 255), cv2.FILLED)
+                        # pyautogui.moveTo(wScr - clocX, clocY, duration=0)
+                        mouse.position = (wScr - clocX, clocY)
+                        cv2.circle(img, (x1, y1), 15, (255, 0, 255), cv2.FILLED)
                         plocX, plocY = clocX, clocY
 
                     # 볼륨 조절
@@ -254,7 +262,8 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
                             y3 = np.interp(y1, (frameR, hCam - frameR), (0, hScr))
                             clocX = plocX + (x3 - plocX) / smoothening
                             clocY = plocY + (y3 - plocY) / smoothening
-                            pyautogui.mouseDown(wScr - clocX, clocY)
+                            # pyautogui.mouseDown(wScr - clocX, clocY)
+                            mouse.click(Button.left, 1)
                             # cv2.circle(img, (x1, y1), 15, (255, 0, 255), cv2.FILLED)
                             plocX, plocY = clocX, clocY
                         else:
