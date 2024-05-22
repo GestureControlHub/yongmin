@@ -15,7 +15,6 @@ mouse = Controller()
 def set_volume(volume_percent):
     os.system(f"osascript -e 'set volume output volume {volume_percent}'")
 
-
 before_brightness = 0
 # 밝기 조절 함수
 def set_brightness(brightness_percent):
@@ -50,7 +49,7 @@ pTime = 0
 plocX, plocY = 0, 0
 clocX, clocY = 0, 0
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 cap.set(3, wCam)
 cap.set(4, hCam)
@@ -68,6 +67,9 @@ control_mode = True
 # 타이머 설정
 last_action_time = 0
 action_cooldown = 1  # 지연 시간을 1초로 설정
+
+last_click_time = 0
+click_cooldown = 1
 def calculate_angles(hand_landmarks, image_width, image_height):
     joint = np.zeros((21, 3))
     for j, lm in enumerate(hand_landmarks.landmark):
@@ -126,24 +128,20 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
                     X_pred = np.array([angles], dtype=np.float32)
 
                     gesture_id = model.predict(X_pred)[0]
-                    print(gesture_id)
                     gesture_name = [name for name, idx in gesture_folders.items() if idx == gesture_id][0]
-
+                    print(gesture_name)
                     if current_time - last_action_time > action_cooldown:
                         if gesture_name == "paper":
                             # 볼륨 조절 모드 or 디스플레이 밝기 조절 전환
-                            # control_mode = not control_mode
-                            # if control_mode:
-                            #     cv2.putText(img, 'sound control', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,cv2.LINE_AA)
-                            # else:
-                            #     cv2.putText(img, 'display brightness control', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                            #                 (255, 255, 255), 2, cv2.LINE_AA)
+                            control_mode = not control_mode
+                            if control_mode:
+                                print("sound control mode !!")
+                                cv2.putText(img, 'sound control', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,cv2.LINE_AA)
+                            else:
+                                print("display brightness control mode !!")
+                                cv2.putText(img, 'display brightness control', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                            (255, 255, 255), 2, cv2.LINE_AA)
                             last_action_time = current_time  # 마지막 동작 시간 업데이트
-
-                            # pyautogui.hotkey('command' if os.name == 'posix' else 'ctrl', 'm')
-                            # cv2.putText(img, '최소화', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
-                            #             cv2.LINE_AA)
-                            # last_action_time = current_time  # 마지막 동작 시간 업데이트
 
                         elif gesture_name == "rock":
                             # pyautogui.hotkey('ctrl' if os.name == 'posix' else 'ctrl', 'right')
@@ -203,32 +201,33 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
                     # 여기에서 마우스의 초기 위치를 설정
                     plocX, plocY = pyautogui.position()
                     mouse_control_enabled = True
-
+                current_mouse_time = time.time()
                 if len(lmList) != 0:
                     x1, y1 = lmList[8][1:]
                     x2, y2 = lmList[12][1:]
                     fingers = detector.fingersUp()
 
                     # 마우스 커서 이동 코드
-                    if fingers[1] == 1 and fingers[2] == 0 and fingers[3] == 0 and fingers[4] == 0:
+                    if fingers[1] == 1 and fingers[2] == 0:
                         x3 = np.interp(x1, (frameR, wCam - frameR), (0, wScr))
                         y3 = np.interp(y1, (frameR, hCam - frameR), (0, hScr))
                         clocX = plocX + (x3 - plocX) / smoothening
                         clocY = plocY + (y3 - plocY) / smoothening
-                        # pyautogui.moveTo(wScr - clocX, clocY, duration=0)
                         mouse.position = (wScr - clocX, clocY)
                         cv2.circle(img, (x1, y1), 15, (255, 0, 255), cv2.FILLED)
                         plocX, plocY = clocX, clocY
 
                     # 볼륨 조절
                     if fingers[0] == 1 and fingers[1] == 1 and fingers[2] == 0 and fingers[3] == 0:
+                        print("조절 모드")
                         if control_mode:
                             x_thumb, y_thumb = lmList[4][1], lmList[4][2]  # 엄지손가락 좌표
                             x_index, y_index = lmList[8][1], lmList[8][2]  # 검지손가락 좌표
                             distance = math.hypot(x_index - x_thumb, y_index - y_thumb)  # 두 손가락 사이의 유클리디안 거리 계산
-
+                            print("distance: ",distance)
                             # 거리에 따라 볼륨 조절 (예를 들어, 거리가 30px에서 200px 사이라고 가정)
-                            vol = np.interp(distance, [30, 200], [0, 100])
+                            vol = np.interp(distance, [20, 120], [0, 100])
+                            print("vol: ", vol)
                             set_volume(vol)  # 볼륨 설정 함수 호출
 
                             # 볼륨 상태를 이미지에 표시
@@ -256,21 +255,27 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_
 
                     # 클릭 이벤트 처리 코드
                     if fingers[1] == 1 and fingers[2] == 1 and fingers[3] == 0 and fingers[4] == 0:
+                        print("click 준비")
                         length, img, lineInfo = detector.findDistance(8, 12, img)
-                        if length < 40:
+                        if length < 20:
                             x3 = np.interp(x1, (frameR, wCam - frameR), (0, wScr))
                             y3 = np.interp(y1, (frameR, hCam - frameR), (0, hScr))
                             clocX = plocX + (x3 - plocX) / smoothening
                             clocY = plocY + (y3 - plocY) / smoothening
                             # pyautogui.mouseDown(wScr - clocX, clocY)
-                            mouse.click(Button.left, 1)
+                            if current_mouse_time - last_click_time > click_cooldown:
+                                mouse.click(Button.left, 1)
+                                last_click_time = current_mouse_time
                             # cv2.circle(img, (x1, y1), 15, (255, 0, 255), cv2.FILLED)
                             plocX, plocY = clocX, clocY
-                        else:
-                            pyautogui.click()
-                            # cv2.circle(img, (lineInfo[4], lineInfo[5]), 15, (0, 255, 0), cv2.FILLED)
-                            pyautogui.sleep(0.5)
 
+                        # else:
+                            # pyautogui.click()
+                            # cv2.circle(img, (lineInfo[4], lineInfo[5]), 15, (0, 255, 0), cv2.FILLED)
+                            # pyautogui.sleep(0.5)
+                    if fingers[1] == 0:
+                        mouse_control_enabled = False  # 마우스 컨트롤 비활성화
+                        recognize_mode = True
                 else:
                     if mouse_control_enabled:
                         mouse_control_enabled = False  # 마우스 컨트롤 비활성화
