@@ -65,7 +65,7 @@ def extract_features_and_labels():
         features = []
         labels = []
         for gesture_name, label in gesture_folders.items():
-            folder_path = os.path.join('rps_data_sample', gesture_name)
+            folder_path = os.path.join('data', gesture_name)
             for img_name in os.listdir(folder_path):
                 if img_name.lower().endswith(('.png', '.jpg', '.jpeg')):
                     img_path = os.path.join(folder_path, img_name)
